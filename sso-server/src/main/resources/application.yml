@@ -1,0 +1,14 @@
+server:
+  port: 8080
+
+sso:
+  jwt:
+    secret: ${SSO_JWT_SECRET:dev-only-change-me-use-long-random-string-for-production}
+    issuer: sso-poc
+    access-token-ttl-seconds: 3600
+  api-key: ${SSO_API_KEY:poc-dev-api-key}
+  password-session-ttl-minutes: 15
+
+spring:
+  application:
+    name: sso-server
