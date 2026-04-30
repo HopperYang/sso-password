@@ -81,3 +81,100 @@ input[type="text"] {
 nav a {
   margin-right: 1rem;
 }
+
+/* 6 圆点 PIN（银行卡页） */
+.pin-circles-wrap {
+  position: relative;
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+}
+
+.pin-circles-input {
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 100%;
+  height: 52px;
+  opacity: 0;
+  cursor: pointer;
+  z-index: 2;
+  border: none;
+  font-size: 16px; /* 避免 iOS 聚焦放大 */
+}
+
+.pin-circles-row {
+  display: flex;
+  gap: 0.65rem;
+  justify-content: center;
+  align-items: center;
+  padding: 0.75rem 0;
+  pointer-events: none;
+}
+
+.pin-circle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 2px solid #cbd5e1;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.pin-circle--filled {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 1px rgb(37 99 235 / 15%);
+}
+
+.pin-circle--filled::after {
+  content: "";
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #0f172a;
+}
+
+.pin-bank-screen {
+  padding: 0.25rem 0 0.5rem;
+}
+
+.pin-bank-screen-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.15rem;
+  font-weight: 650;
+  text-align: center;
+}
+
+.pin-bank-screen-hint {
+  margin: 0 0 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+.pin-bank-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1.5rem;
+}
+
+button.ghost {
+  background: transparent;
+  border-color: #94a3b8;
+  color: #475569;
+}
+
+button.ghost:hover:not(:disabled) {
+  background: #f1f5f9;
+}
+
+button.ghost:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

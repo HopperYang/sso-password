@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/vite-env.d.ts","./src/crypto/webcrypto.ts","./src/pages/home.tsx","./src/pages/passwordpage.tsx"],"version":"5.8.3"}
+{"root":["./src/app.tsx","./src/api.ts","./src/main.tsx","./src/vite-env.d.ts","./src/components/encryptedpinflow.tsx","./src/components/pinsixcirclesinput.tsx","./src/components/securepinfield.tsx","./src/crypto/webcrypto.ts","./src/pages/bankpinpage.tsx","./src/pages/home.tsx","./src/pages/passwordpage.tsx"],"version":"5.8.3"}

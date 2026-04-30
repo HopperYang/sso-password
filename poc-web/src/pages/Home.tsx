@@ -150,7 +150,8 @@ export default function Home() {
         </div>
       )}
       <p className="muted" style={{ marginBottom: 0 }}>
-        借记卡密码设置请前往「密码收集」子页；密码在浏览器内用会话公钥加密后提交。
+        借记卡密码：同站演示见「密码收集」；<strong>档位 A（不信任 vendor）</strong>请另开终端启动{" "}
+        <code>poc-vendor</code>（5174）嵌入银行源 <code>/bank/pin</code>（5173），详见根目录 README。
       </p>
     </div>
   );
