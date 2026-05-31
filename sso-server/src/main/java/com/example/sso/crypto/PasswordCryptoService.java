@@ -55,14 +55,10 @@ public class PasswordCryptoService {
         PasswordSession session = sessions.consumeIfValid(sessionId)
                 .orElseThrow(() -> new IllegalArgumentException("invalid or expired session"));
 
-        try {
-            byte[] aesKey = CryptoSupport.rsaOaepDecrypt(session.serverKeyPair().getPrivate(), encryptedKey);
-            byte[] passwordBytes = CryptoSupport.aesGcmDecrypt(aesKey, iv, ciphertext, tag);
-            java.util.Arrays.fill(passwordBytes, (byte) 0);
-            org.slf4j.LoggerFactory.getLogger(PasswordCryptoService.class).info("password decrypt ok");
-        } finally {
-            sessions.remove(sessionId);
-        }
+        byte[] aesKey = CryptoSupport.rsaOaepDecrypt(session.serverKeyPair().getPrivate(), encryptedKey);
+        byte[] passwordBytes = CryptoSupport.aesGcmDecrypt(aesKey, iv, ciphertext, tag);
+        java.util.Arrays.fill(passwordBytes, (byte) 0);
+        org.slf4j.LoggerFactory.getLogger(PasswordCryptoService.class).info("password decrypt ok");
     }
 
 }

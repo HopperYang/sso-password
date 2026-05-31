@@ -62,7 +62,10 @@ mvn spring-boot:run
 
 - `SSO_JWT_SECRET`：HS256 密钥（足够长）
 - `SSO_API_KEY`：WPF / 脚本调用 `/api/auth/token` 时的 `X-Api-Key`
-- `application.yml` 中 `sso.password-session-ttl-minutes`：密码会话 TTL
+- `sso.password-session.ttl-minutes`：密码会话 TTL
+- `sso.password-session.redis-enabled` / 环境变量 `SSO_PASSWORD_SESSION_REDIS_ENABLED`：是否用 Redis 存会话私钥（多机 + LB 时设为 `true`）
+- `sso.password-session.redis-key-prefix` / 环境变量 `SSO_PASSWORD_SESSION_REDIS_KEY_PREFIX`：Redis 会话 key 前缀（默认 `sso:pwd-session:`，多环境/多租户可区分）
+- Redis 连接：`REDIS_HOST`、`REDIS_PORT`、`REDIS_PASSWORD`（仅 `redis-enabled=true` 时需要）
 
 ## 启动前端（开发）
 
