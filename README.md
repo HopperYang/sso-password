@@ -67,6 +67,33 @@ mvn spring-boot:run
 - `sso.password-session.redis-key-prefix` / 环境变量 `SSO_PASSWORD_SESSION_REDIS_KEY_PREFIX`：Redis 会话 key 前缀（默认 `sso:pwd-session:`，多环境/多租户可区分）
 - Redis 连接：`REDIS_HOST`、`REDIS_PORT`、`REDIS_PASSWORD`（仅 `redis-enabled=true` 时需要）
 
+### Azure OIDC SSO 配置
+
+本 demo 也提供 Azure AD / Microsoft Entra ID 的 OIDC Authorization Code 登录：
+
+1. 在 Azure App Registration 中创建 Web redirect URI：`http://localhost:8080/api/sso/callback`。
+2. 启用 ID Token，并在 Token configuration 中添加 `groups` optional claim（建议返回 group object id）。
+3. 将允许登录的 AD group object id 配到 `SSO_AZURE_REQUIRED_GROUPS`（逗号分隔）。为空时仅做 OIDC 身份校验，不限制 group，便于本地联调。
+4. 启动后端前设置：
+
+```bash
+export SSO_AZURE_ENABLED=true
+export SSO_AZURE_TENANT_ID="<tenant-id>"
+export SSO_AZURE_CLIENT_ID="<app-client-id>"
+export SSO_AZURE_CLIENT_SECRET="<client-secret>"
+export SSO_AZURE_REQUIRED_GROUPS="<group-object-id-1>,<group-object-id-2>"
+```
+
+可选覆盖：
+
+- `SSO_AZURE_REDIRECT_URI`：默认 `http://localhost:8080/api/sso/callback`
+- `SSO_AZURE_WEB_SUCCESS_REDIRECT_URI`：默认 `http://localhost:5173/sso/callback`
+- `SSO_AZURE_POST_LOGOUT_REDIRECT_URI`：默认 `http://localhost:5173/azure-sso`
+- `SSO_AZURE_SCOPES`：默认 `openid,profile,email`
+- `SSO_AZURE_SECURE_COOKIES`：生产 HTTPS 环境建议设为 `true`
+
+> Azure 用户 group 数量过多时，ID Token 可能只返回 group overage 标记而不返回 `groups` 列表。本 demo 会拒绝该登录并提示需要配置 optional group claims 或接入 Microsoft Graph 查询。
+
 ## 启动前端（开发）
 
 ```bash
@@ -76,6 +103,8 @@ npm run dev
 ```
 
 开发模式下 Vite 将 `/api` 代理到 `http://127.0.0.1:8080`，因此 `fetch('/api/...')` 无需配置 `VITE_API_BASE`。
+
+Azure SSO demo 入口为 **http://localhost:5173/azure-sso**。点击「使用 Azure 登录」后，页面会先调用 `GET /api/sso/login-url`，再跳转到 Azure；回调成功后 React 从 `/sso/callback#access_token=...` 保存应用 JWT，随后可在 `/azure-sso` 查看 `session/me`、AD groups 与 Bearer token。
 
 首页在 **`npm run dev` 且未带 `?token=`** 时，会显示 **「开发：模拟 WPF 取令牌」**：填写工号、姓名后点击即可调用 `POST /api/auth/token`（默认 API Key 与后端 `sso.api-key` 一致）。**生产构建 (`npm run build`) 不会包含该表单。** 也可在 macOS 等环境用 `?token=JWT` 手工传入。
 
@@ -114,6 +143,10 @@ dotnet run
 |------|------|------|
 | POST | `/api/auth/token` | Header `X-Api-Key`，Body `employeeId`、`displayName`，返回 JWT |
 | GET | `/api/auth/me` | Header `Authorization: Bearer <jwt>` |
+| GET | `/api/sso/login-url` | 创建 OIDC state/nonce，写入 HttpOnly state cookie，返回 Azure authorize URL |
+| GET | `/api/sso/callback` | Azure redirect URI；换取 token、校验 ID Token、校验 AD group，创建 SSO session 并跳回 React callback |
+| GET | `/api/sso/session/me` | 读取 HttpOnly session cookie，返回用户、Azure groups 与应用 JWT |
+| POST | `/api/sso/logout` | 清理本地 SSO session，返回 Azure logout URL |
 | POST | `/api/crypto/password/session` | Body `clientPublicKeySpki`（Base64 SPKI），返回 `sessionId`（与内层明文一致）及外层信封 `encryptedKey` / `iv` / `ciphertext` / `tag` |
 | POST | `/api/crypto/password/submit` | Body `sessionId`、`encryptedKey`、`iv`、`ciphertext`、`tag`（均 Base64） |
 
