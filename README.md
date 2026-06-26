@@ -7,10 +7,10 @@
 | | **方案一：同站演示 + WPF** | **方案二：档位 A（银行源 PIN + Vendor 壳站）** |
 |---|---------------------------|-----------------------------------------------|
 | **目的** | 一条命令跑通 SSO 登录、密码加密提交、桌面 WebView2 带 Token 打开站点 | 模拟「第三方托管壳站 + 银行托管 PIN」：跨源 iframe，父页脚本无法读 PIN |
-| **前端工程** | 仅 [`poc-web`](poc-web/)（Vite + React，默认端口 **5173**） | [`poc-web`](poc-web/)（银行 PIN 页）+ [`poc-vendor`](poc-vendor/)（极简壳站，端口 **5174**） |
-| **登录 / 身份** | 首页 `?token=` 或开发表单调 `POST /api/auth/token`；`GET /api/auth/me` 展示用户 | 不强制改登录模型；PIN 页经 `5173` 同源调 `/api`（与方案一共后端） |
+| **前端工程** | 仅 [`poc-web`](poc-web/)（Vite + React，默认端口 **3000**） | [`poc-web`](poc-web/)（银行 PIN 页）+ [`poc-vendor`](poc-vendor/)（极简壳站，端口 **5174**） |
+| **登录 / 身份** | BFF 模式：前端调 `GET /api/auth/session` 检查后端 Session；未登录跳转 `http://localhost:8080/oauth2/authorization/azure`；旧 `?token=` / `POST /api/auth/token` 仅保留为 POC 调试入口 | 不强制改登录模型；PIN 页经 `3000` 同源调 `/api`（与方案一共后端） |
 | **密码采集路由** | [`/password`](poc-web/src/pages/PasswordPage.tsx)：`EncryptedPinFlow` 默认策略，单行 [`SecurePinField`](poc-web/src/components/SecurePinField.tsx)（`type=password`） | [`/bank/pin`](poc-web/src/pages/BankPinPage.tsx)：`pinPolicy="bankCard"`，[**6 圆点**](poc-web/src/components/PinSixCirclesInput.tsx) + 首屏输满 6 位后自动进入「请再次输入」+ 两遍一致后提交；[`?embed=1`](poc-web/src/App.tsx) 时隐藏顶栏便于 iframe |
-| **跨源与嵌入** | 无（单源） | `poc-vendor` 内嵌 `http://localhost:5173/bank/pin?embed=1`；`poc-web` 开发服务器设置 **`Content-Security-Policy: frame-ancestors`**，仅允许 `localhost:5174` 等嵌入 |
+| **跨源与嵌入** | 无（单源） | `poc-vendor` 内嵌 `http://localhost:3000/bank/pin?embed=1`；`poc-web` 开发服务器设置 **`Content-Security-Policy: frame-ancestors`**，仅允许 `localhost:5174` 等嵌入 |
 | **桌面客户端** | [`poc-wpf`](poc-wpf/)：WebView2 打开 `Poc:WebUrl/?token=...` | 本方案 POC 以浏览器双端口为主；WPF 仍可只打开银行 URL 作类比 |
 | **启动命令** | `sso-server` + `cd poc-web && npm run dev`；可选 `poc-wpf` | 在方案一基础上再启 `cd poc-vendor && npm run dev`，浏览器访问 **http://localhost:5174** |
 
@@ -32,7 +32,7 @@
 
 | 类型 | 说明 |
 |------|------|
-| **优点** | **跨源**：父页面（5174）与 PIN 页（5173）不同源，父页脚本**不能**读取 iframe 内 DOM/输入，利于说明「采集面在银行源」；开发服务器对银行页设置 **`frame-ancestors`**，演示限制谁可嵌入；`/bank/pin` 使用 **6 圆点 + 双屏确认**，降低误触与明文展示。 |
+| **优点** | **跨源**：父页面（5174）与 PIN 页（3000）不同源，父页脚本**不能**读取 iframe 内 DOM/输入，利于说明「采集面在银行源」；开发服务器对银行页设置 **`frame-ancestors`**，演示限制谁可嵌入；`/bank/pin` 使用 **6 圆点 + 双屏确认**，降低误触与明文展示。 |
 | **缺点** | 需同时起两个前端；iframe 在部分 WebView/内嵌浏览器中行为需单独测；**POC 仅白名单 `localhost:5174`**，上生产需改为真实 vendor 域并同步 CSP。 |
 | **典型风险 / 漏洞面** | **钓鱼**：用户若打开假域名假页面，同源策略帮不上忙；**银行源 XSS / 供应链** 仍可篡改银行页脚本，在加密前窃 PIN；**点击劫持 / 叠层**（父页透明覆盖诱导点击）需依赖 CSP、`frame-ancestors` 与交互设计缓解，POC 未穷尽；**错误配置 CSP** 时可能允许恶意父域嵌入；**侧信道**（日志、APM、键盘记录、剪贴板）仍存在。 |
 
@@ -60,12 +60,31 @@ mvn spring-boot:run
 
 默认端口 `8080`。可通过环境变量覆盖：
 
+- `AZURE_TENANT_ID`：Microsoft Entra ID 租户 ID（默认 `common`，生产建议使用明确租户）
+- `AZURE_CLIENT_ID` / `AZURE_CLIENT_SECRET`：Entra ID 应用注册的 Web 客户端凭据
+- `SSO_OAUTH2_SUCCESS_REDIRECT_URL`：OAuth2 登录成功后的前端地址，默认 `http://localhost:3000/dashboard`
 - `SSO_JWT_SECRET`：HS256 密钥（足够长）
 - `SSO_API_KEY`：WPF / 脚本调用 `/api/auth/token` 时的 `X-Api-Key`
 - `sso.password-session.ttl-minutes`：密码会话 TTL
 - `sso.password-session.redis-enabled` / 环境变量 `SSO_PASSWORD_SESSION_REDIS_ENABLED`：是否用 Redis 存会话私钥（多机 + LB 时设为 `true`）
 - `sso.password-session.redis-key-prefix` / 环境变量 `SSO_PASSWORD_SESSION_REDIS_KEY_PREFIX`：Redis 会话 key 前缀（默认 `sso:pwd-session:`，多环境/多租户可区分）
 - Redis 连接：`REDIS_HOST`、`REDIS_PORT`、`REDIS_PASSWORD`（仅 `redis-enabled=true` 时需要）
+
+### Microsoft Entra ID SSO（BFF 模式）
+
+在 Azure 控制台创建 App Registration 时请选择 **Web** 平台类型，不要选择 SPA。Redirect URI 使用 Spring Security 默认回调：
+
+```text
+http://localhost:8080/login/oauth2/code/azure
+```
+
+前端不保存 Microsoft Access Token / ID Token。完整流程为：
+
+1. `poc-web` 初始化调用 `GET /api/auth/session`（携带 Cookie）。
+2. 后端未登录返回 `401`，前端跳转 `http://localhost:8080/oauth2/authorization/azure`。
+3. Spring Security 将浏览器重定向到 Microsoft Entra ID。
+4. Microsoft 回调 `http://localhost:8080/login/oauth2/code/azure`，后端完成授权码换票与 ID Token 校验。
+5. 后端创建 HttpOnly `JSESSIONID` 后跳回 `http://localhost:3000/dashboard`。
 
 ## 启动前端（开发）
 
@@ -75,15 +94,15 @@ npm install
 npm run dev
 ```
 
-开发模式下 Vite 将 `/api` 代理到 `http://127.0.0.1:8080`，因此 `fetch('/api/...')` 无需配置 `VITE_API_BASE`。
+开发模式下 `poc-web` 监听 **http://localhost:3000**，Vite 将 `/api` 代理到 `http://127.0.0.1:8080`，因此 `fetch('/api/...')` 无需配置 `VITE_API_BASE`。
 
-首页在 **`npm run dev` 且未带 `?token=`** 时，会显示 **「开发：模拟 WPF 取令牌」**：填写工号、姓名后点击即可调用 `POST /api/auth/token`（默认 API Key 与后端 `sso.api-key` 一致）。**生产构建 (`npm run build`) 不会包含该表单。** 也可在 macOS 等环境用 `?token=JWT` 手工传入。
+首页会优先检查后端 Session；未登录会跳转到 Microsoft Entra ID。旧调试路径仍保留：可用 `?token=JWT` 手工传入，或设置 `VITE_AUTH_AUTO_REDIRECT=false` 后使用开发模拟登录表单调用 `POST /api/auth/token`。**生产构建 (`npm run build`) 不会包含该表单。**
 
-生产构建静态资源时，若前后端不同源，可设置 `VITE_API_BASE` 为后端根 URL（例如 `http://localhost:8080`）。可选在 `poc-web/.env.local` 中设置 `VITE_SSO_API_KEY`（勿提交仓库）。
+生产构建静态资源时，若前后端不同源，可设置 `VITE_API_BASE` 为后端根 URL（例如 `http://localhost:8080`），并设置 `VITE_AUTH_BASE` 为 OAuth2 发起登录的后端根 URL。可选在 `poc-web/.env.local` 中设置 `VITE_SSO_API_KEY`（勿提交仓库）。
 
 ## 档位 A 启动步骤（方案二）
 
-1. 与上文相同，先启动 **sso-server** 与 **poc-web**（`npm run dev`，监听 **5173**）。
+1. 与上文相同，先启动 **sso-server** 与 **poc-web**（`npm run dev`，监听 **3000**）。
 2. 再开一终端：
 
 ```bash
@@ -92,7 +111,7 @@ npm install
 npm run dev
 ```
 
-3. 浏览器打开 **http://localhost:5174**：黄色背景的页面为「第三方」壳站；内嵌 iframe 为银行源 PIN 页。也可直接访问 **http://localhost:5173/bank/pin** 对比同页独立打开（带导航栏）与 **http://localhost:5173/bank/pin?embed=1**（嵌入时隐藏导航栏）。
+3. 浏览器打开 **http://localhost:5174**：黄色背景的页面为「第三方」壳站；内嵌 iframe 为银行源 PIN 页。也可直接访问 **http://localhost:3000/bank/pin** 对比同页独立打开（带导航栏）与 **http://localhost:3000/bank/pin?embed=1**（嵌入时隐藏导航栏）。
 
 ## 启动 WPF（Windows）
 
@@ -113,7 +132,8 @@ dotnet run
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `/api/auth/token` | Header `X-Api-Key`，Body `employeeId`、`displayName`，返回 JWT |
-| GET | `/api/auth/me` | Header `Authorization: Bearer <jwt>` |
+| GET | `/api/auth/session` | BFF Session 状态检查；已登录返回当前 OIDC 用户，未登录返回 401 |
+| GET | `/api/auth/me` | 优先支持 Header `Authorization: Bearer <jwt>`；无 Bearer 时返回当前 BFF Session 用户 |
 | POST | `/api/crypto/password/session` | Body `clientPublicKeySpki`（Base64 SPKI），返回 `sessionId`（与内层明文一致）及外层信封 `encryptedKey` / `iv` / `ciphertext` / `tag` |
 | POST | `/api/crypto/password/submit` | Body `sessionId`、`encryptedKey`、`iv`、`ciphertext`、`tag`（均 Base64） |
 

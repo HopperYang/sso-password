@@ -21,7 +21,7 @@ export default defineConfig({
     frameAncestorsCsp(["http://localhost:5174", "http://127.0.0.1:5174"]),
   ],
   server: {
-    port: 5173,
+    port: 3000,
     strictPort: true,
     proxy: {
       "/api": { target: "http://127.0.0.1:8080", changeOrigin: true },

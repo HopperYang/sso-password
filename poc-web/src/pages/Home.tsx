@@ -1,15 +1,17 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { fetchMe, issueToken } from "../api";
+import { fetchMe, fetchSessionUser, issueToken, redirectToAzureLogin } from "../api";
 
 const TOKEN_KEY = "sso_access_token";
 const isDev = import.meta.env.DEV;
+const autoRedirectToAzure = import.meta.env.VITE_AUTH_AUTO_REDIRECT !== "false";
 const defaultApiKey = import.meta.env.VITE_SSO_API_KEY ?? "poc-dev-api-key";
 
 export default function Home() {
   const [params] = useSearchParams();
   const [token, setToken] = useState<string | null>(() => sessionStorage.getItem(TOKEN_KEY));
   const [user, setUser] = useState<{ employeeId: string; displayName: string } | null>(null);
+  const [checkingSession, setCheckingSession] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [devEmployeeId, setDevEmployeeId] = useState("E0001");
   const [devDisplayName, setDevDisplayName] = useState("本地调试");
@@ -28,8 +30,38 @@ export default function Home() {
   }, [params]);
 
   useEffect(() => {
+    if (token) {
+      return;
+    }
+    let cancelled = false;
+    setCheckingSession(true);
+    (async () => {
+      try {
+        const me = await fetchSessionUser({ redirectOnUnauthorized: autoRedirectToAzure });
+        if (!cancelled) {
+          setUser(me);
+          setErr(null);
+        }
+      } catch {
+        if (!cancelled) {
+          setUser(null);
+          if (!autoRedirectToAzure) {
+            setErr("未检测到后端 Session。可点击后端登录入口，或使用下方开发模拟登录。");
+          }
+        }
+      } finally {
+        if (!cancelled) {
+          setCheckingSession(false);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  useEffect(() => {
     if (!token) {
-      setUser(null);
       return;
     }
     let cancelled = false;
@@ -45,8 +77,8 @@ export default function Home() {
           setUser(null);
           setErr(
             isDev
-              ? "令牌无效或已过期。可在下方「开发模拟登录」重新取令牌，或使用 WPF / ?token=。"
-              : "令牌无效或已过期。请从 WPF 示例重新打开页面。"
+              ? "令牌无效或已过期。默认推荐使用 Microsoft Entra ID 登录；调试时可在下方「开发模拟登录」重新取令牌，或使用 WPF / ?token=。"
+              : "令牌无效或已过期。请重新登录。"
           );
         }
       }
@@ -77,12 +109,20 @@ export default function Home() {
   return (
     <div className="card">
       <h1 style={{ marginTop: 0 }}>SSO POC 首页</h1>
-      {!token && (
+      {checkingSession && (
+        <p className="muted">
+          正在检查后端登录会话；如果未登录，将跳转到 Microsoft Entra ID。
+        </p>
+      )}
+      {!token && !user && !checkingSession && (
         <>
           <p className="muted">
-            未检测到登录令牌。Windows 上可运行 <code>poc-wpf</code>；任意系统可用{" "}
-            <code>?token=...</code> 传入 JWT，或在开发模式下使用下方模拟登录。
+            未检测到后端 Session。默认流程会跳转到 Microsoft Entra ID；Windows 上仍可运行{" "}
+            <code>poc-wpf</code>，任意系统可用 <code>?token=...</code> 传入 JWT，或在开发模式下使用下方模拟登录。
           </p>
+          <button type="button" className="primary" onClick={redirectToAzureLogin}>
+            使用 Microsoft Entra ID 登录
+          </button>
           {isDev && (
             <form
               onSubmit={onDevLogin}

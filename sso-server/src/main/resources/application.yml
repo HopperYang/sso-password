@@ -1,7 +1,14 @@
 server:
   port: 8080
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: lax
 
 sso:
+  oauth2:
+    success-redirect-url: ${SSO_OAUTH2_SUCCESS_REDIRECT_URL:http://localhost:3000/dashboard}
   jwt:
     secret: ${SSO_JWT_SECRET:dev-only-change-me-use-long-random-string-for-production}
     issuer: sso-poc
@@ -22,3 +29,27 @@ spring:
 
   application:
     name: sso-server
+
+  security:
+    oauth2:
+      client:
+        registration:
+          azure:
+            provider: azure
+            client-id: ${AZURE_CLIENT_ID:replace-with-azure-client-id}
+            client-secret: ${AZURE_CLIENT_SECRET:replace-with-azure-client-secret}
+            authorization-grant-type: authorization_code
+            client-authentication-method: client_secret_basic
+            redirect-uri: "{baseUrl}/login/oauth2/code/{registrationId}"
+            scope:
+              - openid
+              - profile
+              - email
+            client-name: Microsoft Entra ID
+        provider:
+          azure:
+            authorization-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID:common}/oauth2/v2.0/authorize
+            token-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID:common}/oauth2/v2.0/token
+            jwk-set-uri: https://login.microsoftonline.com/${AZURE_TENANT_ID:common}/discovery/v2.0/keys
+            user-info-uri: https://graph.microsoft.com/oidc/userinfo
+            user-name-attribute: sub
