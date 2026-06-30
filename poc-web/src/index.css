@@ -178,3 +178,30 @@ button.ghost:disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
+
+.token-box {
+  display: block;
+  width: 100%;
+  min-height: 120px;
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
+  resize: vertical;
+}
+
+.code-block {
+  overflow-x: auto;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #e2e8f0;
+  font-size: 0.8rem;
+}
+
+.group-list {
+  margin-top: 0.5rem;
+  padding-left: 1.25rem;
+}

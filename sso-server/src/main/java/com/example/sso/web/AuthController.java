@@ -44,7 +44,7 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<Map<String, String>> me(
+    public ResponseEntity<Map<String, Object>> me(
             @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String auth) {
         if (auth == null || !auth.regionMatches(true, 0, "Bearer ", 0, 7)) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();

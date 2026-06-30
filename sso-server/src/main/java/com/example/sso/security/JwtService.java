@@ -9,7 +9,9 @@ import org.springframework.stereotype.Service;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -25,12 +27,17 @@ public class JwtService {
     }
 
     public String issueAccessToken(String employeeId, String displayName) {
+        return issueAccessToken(employeeId, displayName, List.of());
+    }
+
+    public String issueAccessToken(String employeeId, String displayName, Collection<String> groups) {
         Instant now = Instant.now();
         Instant exp = now.plusSeconds(props.jwt().accessTokenTtlSeconds());
         return Jwts.builder()
                 .issuer(props.jwt().issuer())
                 .subject(employeeId)
                 .claim("name", displayName)
+                .claim("groups", List.copyOf(groups))
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(exp))
                 .signWith(key)
@@ -51,9 +58,11 @@ public class JwtService {
         }
     }
 
-    public Map<String, String> claimsToUser(Claims c) {
+    public Map<String, Object> claimsToUser(Claims c) {
+        Object groups = c.get("groups");
         return Map.of(
                 "employeeId", c.getSubject(),
-                "displayName", String.valueOf(c.get("name", String.class)));
+                "displayName", String.valueOf(c.get("name", String.class)),
+                "groups", groups instanceof List<?> ? groups : List.of());
     }
 }

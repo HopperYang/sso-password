@@ -7,6 +7,20 @@ sso:
     issuer: sso-poc
     access-token-ttl-seconds: 3600
   api-key: ${SSO_API_KEY:poc-dev-api-key}
+  azure:
+    enabled: ${SSO_AZURE_ENABLED:false}
+    authority-host: ${SSO_AZURE_AUTHORITY_HOST:https://login.microsoftonline.com}
+    tenant-id: ${SSO_AZURE_TENANT_ID:}
+    client-id: ${SSO_AZURE_CLIENT_ID:}
+    client-secret: ${SSO_AZURE_CLIENT_SECRET:}
+    redirect-uri: ${SSO_AZURE_REDIRECT_URI:http://localhost:8080/api/sso/callback}
+    web-success-redirect-uri: ${SSO_AZURE_WEB_SUCCESS_REDIRECT_URI:http://localhost:5173/sso/callback}
+    post-logout-redirect-uri: ${SSO_AZURE_POST_LOGOUT_REDIRECT_URI:http://localhost:5173/azure-sso}
+    scopes: ${SSO_AZURE_SCOPES:openid,profile,email}
+    required-groups: ${SSO_AZURE_REQUIRED_GROUPS:}
+    state-ttl-seconds: ${SSO_AZURE_STATE_TTL_SECONDS:300}
+    session-ttl-seconds: ${SSO_AZURE_SESSION_TTL_SECONDS:3600}
+    secure-cookies: ${SSO_AZURE_SECURE_COOKIES:false}
   password-session:
     ttl-minutes: 15
     redis-enabled: ${SSO_PASSWORD_SESSION_REDIS_ENABLED:false}

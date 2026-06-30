@@ -1,14 +1,14 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { readAccessToken, saveAccessToken } from "../auth";
 import { fetchMe, issueToken } from "../api";
 
-const TOKEN_KEY = "sso_access_token";
 const isDev = import.meta.env.DEV;
 const defaultApiKey = import.meta.env.VITE_SSO_API_KEY ?? "poc-dev-api-key";
 
 export default function Home() {
   const [params] = useSearchParams();
-  const [token, setToken] = useState<string | null>(() => sessionStorage.getItem(TOKEN_KEY));
+  const [token, setToken] = useState<string | null>(() => readAccessToken());
   const [user, setUser] = useState<{ employeeId: string; displayName: string } | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [devEmployeeId, setDevEmployeeId] = useState("E0001");
@@ -19,7 +19,7 @@ export default function Home() {
   useEffect(() => {
     const q = params.get("token");
     if (q) {
-      sessionStorage.setItem(TOKEN_KEY, q);
+      saveAccessToken(q);
       setToken(q);
       const url = new URL(window.location.href);
       url.searchParams.delete("token");
@@ -65,7 +65,7 @@ export default function Home() {
         employeeId: devEmployeeId.trim(),
         displayName: devDisplayName.trim(),
       });
-      sessionStorage.setItem(TOKEN_KEY, access);
+      saveAccessToken(access);
       setToken(access);
     } catch {
       setErr("取令牌失败：请确认后端已启动，且 API Key 与 sso-server 配置一致。");
@@ -80,8 +80,8 @@ export default function Home() {
       {!token && (
         <>
           <p className="muted">
-            未检测到登录令牌。Windows 上可运行 <code>poc-wpf</code>；任意系统可用{" "}
-            <code>?token=...</code> 传入 JWT，或在开发模式下使用下方模拟登录。
+            未检测到登录令牌。可进入「Azure SSO」使用 OIDC 登录；Windows 上也可运行{" "}
+            <code>poc-wpf</code>；任意系统可用 <code>?token=...</code> 传入 JWT，或在开发模式下使用下方模拟登录。
           </p>
           {isDev && (
             <form

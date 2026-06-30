@@ -25,6 +25,33 @@ export async function fetchMe(token: string): Promise<{ employeeId: string; disp
   return res.json();
 }
 
+export async function fetchSsoLoginUrl(): Promise<string> {
+  const res = await fetch(`${API}/api/sso/login-url`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("sso login-url failed");
+  const data = (await res.json()) as { loginUrl: string };
+  return data.loginUrl;
+}
+
+export async function fetchSsoSession(): Promise<SsoSession> {
+  const res = await fetch(`${API}/api/sso/session/me`, {
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("sso session not found");
+  return res.json();
+}
+
+export async function logoutSso(): Promise<string> {
+  const res = await fetch(`${API}/api/sso/logout`, {
+    method: "POST",
+    credentials: "include",
+  });
+  if (!res.ok) throw new Error("sso logout failed");
+  const data = (await res.json()) as { logoutUrl: string };
+  return data.logoutUrl;
+}
+
 export async function createPasswordSession(clientPublicKeySpki: string): Promise<Envelope> {
   const res = await fetch(`${API}/api/crypto/password/session`, {
     method: "POST",
@@ -59,4 +86,19 @@ export type PasswordSubmitBody = {
   iv: string;
   ciphertext: string;
   tag: string;
+};
+
+export type SsoUser = {
+  subject: string;
+  employeeId: string;
+  displayName: string;
+  email: string;
+  groups: string[];
+};
+
+export type SsoSession = {
+  user: SsoUser;
+  accessToken: string;
+  tokenType: "Bearer";
+  expiresIn: number;
 };
